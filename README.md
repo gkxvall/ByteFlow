@@ -91,6 +91,26 @@ flowchart TB
 
 This is a **qualitative** comparison for choosing a direction, not a benchmark. Numbers depend on hardware, filesystem, codec, and batch size.
 
+### Complexity Comparison Graphs
+
+```mermaid
+xychart-beta
+    title "Space Complexity: Host RAM vs Dataset Size (N)"
+    x-axis "Dataset Size (N)" [10k, 50k, 100k, 500k, 1M]
+    y-axis "Host RAM Usage (GB)" 0 --> 64
+    line "Preload All (O(N))" [2, 10, 20, 64, 64]
+    line "ByteFlow (O(1) w.r.t pixels)" [1, 1.2, 1.5, 2.5, 4]
+```
+
+```mermaid
+xychart-beta
+    title "Time Complexity: Startup Delay vs Dataset Size (N)"
+    x-axis "Dataset Size (N)" [10k, 50k, 100k, 500k, 1M]
+    y-axis "Startup Time (Seconds)" 0 --> 300
+    line "Preload All (O(N))" [10, 50, 100, 300, 300]
+    line "ByteFlow (O(N) paths only)" [1, 2, 5, 10, 20]
+```
+
 | Approach                           | Disk (typical)           | Host RAM (dataset)                          | Decode when?              | Throughput notes                                          | Complexity  |
 | ---------------------------------- | ------------------------ | ------------------------------------------- | ------------------------- | --------------------------------------------------------- | ----------- |
 | **ByteFlow v1** (this repo)        | Compressed files         | Paths + labels                              | `__getitem__`             | Good with enough `num_workers`; many files can stress I/O | Low         |
@@ -128,19 +148,21 @@ sequenceDiagram
 ByteFlow/
 ├── logo.png
 ├── README.md
-├── requirements.txt
-├── config.py
-├── train.py
-├── dataset.py
-├── model.py
-├── engine.py
-├── metrics.py
-├── utils/
+├── pyproject.toml
+├── byteflow/
 │   ├── __init__.py
-│   ├── device.py
-│   ├── seed.py
-│   └── memory.py
-├── examples/sample_dataset/
+│   ├── dataset.py
+│   ├── engine.py
+│   ├── metrics.py
+│   ├── model.py
+│   └── utils/
+│       ├── __init__.py
+│       ├── device.py
+│       ├── memory.py
+│       └── seed.py
+├── examples/
+│   ├── demo.py
+│   └── sample_dataset/
 └── tests/
 ```
 
@@ -152,7 +174,7 @@ ByteFlow/
 cd ByteFlow
 python -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+pip install .
 ```
 
 ---
@@ -173,23 +195,37 @@ A minimal example lives under `examples/sample_dataset/`. See `examples/sample_d
 
 ---
 
-## Configure
+## Demo and Usage
 
-Edit **`config.py`** (notably `DATASET_ROOT`, `BATCH_SIZE`, `EPOCHS`, `LEARNING_RATE`, `CHECKPOINT_PATH`, `NUM_WORKERS`).
+ByteFlow is now a Python library! You can use it in your own training scripts without being locked into a rigid config file.
 
----
-
-## Train
-
-From the project root:
+See `examples/demo.py` for a fully functional training script using `argparse`. Run the demo via:
 
 ```bash
-python train.py
+python examples/demo.py --dataset-root examples/sample_dataset --epochs 5 --lr 1e-3 --batch-size 32
 ```
 
 The first run may download **torchvision ImageNet weights** for ResNet-18 (network access; on the order of tens of MB, cached under `~/.cache/torch`).
 
-Logs include dataset path, **class → index** mapping, split sizes, batch size, workers, device, per-epoch train/val **loss and accuracy**, timing, and **CUDA memory** lines when a GPU is used. If `SAVE_BEST_MODEL` is true, the **best** checkpoint by **validation accuracy** is written to `CHECKPOINT_PATH`.
+Logs include dataset path, **class → index** mapping, split sizes, batch size, workers, device, per-epoch train/val **loss and accuracy**, timing, and **CUDA memory** lines when a GPU is used.
+
+### In your own code:
+
+```python
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+from byteflow import build_datasets, build_model, train_one_epoch, validate_one_epoch
+
+train_ds, val_ds, class_to_idx = build_datasets(
+    dataset_root="path/to/data", 
+    image_size=224, 
+    train_split=0.8, 
+    seed=42
+)
+# ... build DataLoaders, model, optimizer ...
+# train_m = train_one_epoch(model, train_loader, criterion, optimizer, device)
+```
 
 ---
 
