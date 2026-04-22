@@ -2,7 +2,7 @@
 
 ![ByteFlow](logo.png)
 
-ByteFlow is a **focused PyTorch** image-classification trainer built around one idea: **keep images compressed on disk** and **decode a sample only when the `Dataset` is asked for it**. Nothing preloads full images at startup, decodes during the initial folder scan, or caches the whole dataset in RAM. The goal is a **small, readable, benchmarkable** baseline you can grow later.
+ByteFlow is a a DataLoader on steroids, A **PyTorch focused** image-classification trainer built around one idea: **keep images compressed on disk** and **decode a sample only when the `Dataset` is asked for it**. Nothing preloads full images at startup, decodes during the initial folder scan, or caches the whole dataset in RAM. The goal is a **small, readable, benchmarkable** baseline you can grow later.
 
 ---
 
@@ -90,6 +90,17 @@ flowchart TB
 ## Comparisons: ByteFlow vs common setups
 
 This is a **qualitative** comparison for choosing a direction, not a benchmark. Numbers depend on hardware, filesystem, codec, and batch size.
+
+### Why use ByteFlow over classical PyTorch?
+
+When we talk about "classical" training in PyTorch, we usually mean using `torchvision.datasets.ImageFolder`. Under the hood, `ImageFolder` does exactly what ByteFlow does: it scans folders to collect file paths and waits until a worker explicitly asks for an image in the `__getitem__` method before decoding it.
+
+Because the underlying mechanics are the same, **ByteFlow and Classical PyTorch will use the exact same amount of RAM, VRAM, and Disk I/O.**
+
+So why use ByteFlow? You can think of it as a **DataLoader on Steroids** when it comes to transparency and hackability. PyTorch's `ImageFolder` hides its logic behind massive library abstractions. ByteFlow strips that away, giving you the bare-bones data pipeline:
+
+- **Learn:** It is a perfect educational tool to understand exactly how data moves from a JPEG on a hard drive to a Tensor on a GPU.
+- **Customize the I/O:** Need to inject a custom decoding step (like decrypting files on the fly), read from a custom binary format, or ignore corrupted images gracefully without crashing the whole training loop? Doing that in ByteFlow is trivial because the code is entirely exposed. Doing that with standard PyTorch often requires writing messy wrapper classes.
 
 ### Complexity Comparison Graphs
 
@@ -218,9 +229,9 @@ from torch.utils.data import DataLoader
 from byteflow import build_datasets, build_model, train_one_epoch, validate_one_epoch
 
 train_ds, val_ds, class_to_idx = build_datasets(
-    dataset_root="path/to/data", 
-    image_size=224, 
-    train_split=0.8, 
+    dataset_root="path/to/data",
+    image_size=224,
+    train_split=0.8,
     seed=42
 )
 # ... build DataLoaders, model, optimizer ...
