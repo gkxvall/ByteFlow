@@ -7,7 +7,7 @@ from pathlib import Path
 import torch
 from PIL import Image
 
-from dataset import (
+from byteflow.dataset import (
     ByteFlowImageFolder,
     build_val_transforms,
     scan_image_folder,

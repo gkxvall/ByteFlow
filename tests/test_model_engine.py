@@ -9,9 +9,9 @@ import torch.nn as nn
 from PIL import Image
 from torch.utils.data import DataLoader
 
-from dataset import ByteFlowImageFolder, build_train_transforms, scan_image_folder
-from engine import train_one_epoch, validate_one_epoch
-from model import build_model
+from byteflow.dataset import ByteFlowImageFolder, build_train_transforms, scan_image_folder
+from byteflow.engine import train_one_epoch, validate_one_epoch
+from byteflow.model import build_model
 
 
 class TestModelEngine(unittest.TestCase):

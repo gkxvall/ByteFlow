@@ -57,14 +57,30 @@ def train_val_split(
     if not 0.0 < train_ratio < 1.0:
         raise ValueError(f"train_ratio must be in (0, 1), got {train_ratio}")
     rng = random.Random(seed)
-    order = samples.copy()
-    rng.shuffle(order)
-    n_train = int(len(order) * train_ratio)
-    if len(order) >= 2:
-        n_train = max(1, min(n_train, len(order) - 1))
-    else:
-        n_train = len(order)
-    return order[:n_train], order[n_train:]
+    
+    # Stratified split: group by label
+    by_label: dict[int, list[tuple[Path, int]]] = {}
+    for sample in samples:
+        by_label.setdefault(sample[1], []).append(sample)
+        
+    train_samples = []
+    val_samples = []
+    
+    for label, class_samples in by_label.items():
+        rng.shuffle(class_samples)
+        n_train = int(len(class_samples) * train_ratio)
+        if len(class_samples) >= 2:
+            n_train = max(1, min(n_train, len(class_samples) - 1))
+        else:
+            n_train = len(class_samples)
+        train_samples.extend(class_samples[:n_train])
+        val_samples.extend(class_samples[n_train:])
+        
+    # Shuffle the final lists so classes aren't clustered sequentially
+    rng.shuffle(train_samples)
+    rng.shuffle(val_samples)
+    
+    return train_samples, val_samples
 
 
 class ByteFlowImageFolder(Dataset):

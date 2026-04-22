@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from metrics import AverageMeter, batch_accuracy
+from .metrics import AverageMeter, batch_accuracy
 
 
 def train_one_epoch(
